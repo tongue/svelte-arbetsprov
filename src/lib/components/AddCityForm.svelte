@@ -1,64 +1,50 @@
 <script lang="ts">
 	import type { City } from '$lib/types';
 	import { cities } from '$lib/stores/cities';
-	import { debounce } from '$lib/utils';
+	import { fetchJson, debounce } from '$lib/utils';
 
-	export let debounceTime = 1000;
+	export let wait = 1000;
 
-	let name = '';
+	let pending = false;
+	let cityName = '';
 	let suggestions: City[] = [];
 	let error: string | undefined = undefined;
 
-	const clearNameInput = () =>
+	const cleanUp = () =>
 		setTimeout(() => {
-			name = '';
+			cityName = '';
+			suggestions = [];
+			error = '';
 		}, 0);
 
-	const cleanUp = () => {
-		clearNameInput();
-		suggestions = [];
-	};
+	const updateSuggestions = debounce(async (name: string): Promise<void> => {
+		suggestions = await fetchJson<City[]>('cities', name);
+		pending = false;
+	}, wait);
 
-	const getWeather = async (city: City) => {
-		const res = await fetch(encodeURI(`/weather/${city.name},${city.country}.json`));
-		return await res.json();
-	}
-
-	const getSuggestions = debounce(async (query: string): Promise<void> => {
-		if (query.length > 1) {
-			const res = await fetch(`/cities/${query}.json`);
-			suggestions = await res.json();
-		}
-	}, debounceTime);
-
-	const addCity = async (cityId: string | null): Promise<void> => {
-		error = undefined;
-
-		if (cityId) {
-			const newCity = suggestions.find((city) => city.id === cityId);
-			const cityAlreadyExists = $cities.find((city) => city.id === cityId);
-
-			if (newCity && !cityAlreadyExists) {
-				cleanUp();
-				const weather = getWeather(newCity);
-				cities.add({ ...newCity, weather });
-			} else if (cityAlreadyExists) {
-				cleanUp();
-				error = 'The city is already added to the list.';
-			} else {
-				error = 'Could not find the city among the suggestions.';
-			}
+	const addCity = (cityId: string): void => {
+		const newCity = suggestions.find((city) => city.id === cityId);
+		const cityAlreadyExists = $cities.find((city) => city.id === cityId);
+		if (newCity && !cityAlreadyExists) {
+			cities.add({ ...newCity });
+		} else if (cityAlreadyExists) {
+			error = 'The city is already added to the list.';
 		} else {
-			error = 'No city id provided.';
+			error = 'Could not find the city among the suggestions.';
 		}
 	};
 
 	const onInput = (event: Event): void => {
 		if (event instanceof InputEvent && event.target instanceof HTMLInputElement) {
-			if (event.inputType === 'insertReplacementText') {
+			const { value } = event.target;
+			if (event.inputType === 'insertReplacementText' && event.data) {
+				cleanUp();
 				addCity(event.data);
+			} else if (value.length > 1) {
+				pending = true;
+				updateSuggestions(value);
 			} else {
-				getSuggestions(event.target.value);
+				suggestions = [];
 			}
 		}
 	};
@@ -68,20 +54,27 @@
 	{#if error}
 		<p>{error}</p>
 	{/if}
-	<label for="city-input">Find a city</label>
-	<input
-		list="suggestions"
-		id="city-input"
-		type="text"
-		name="city"
-		on:input={onInput}
-		bind:value={name}
-		autocomplete="off"
-	/>
-	<datalist id="suggestions">
-		{#each suggestions as { name, country, id }}
-			<option value={id}>{name}, {country}</option>
-		{/each}
-	</datalist>
-	<button type="submit">Add</button>
+	<fieldset>
+		<legend>Hows the weather in&hellip;</legend>
+		<label for="city-input">City</label>
+		<input
+			list="suggestions"
+			id="city-input"
+			type="text"
+			name="city"
+			on:input|preventDefault={onInput}
+			bind:value={cityName}
+			autocomplete="off"
+		/>
+		<datalist id="suggestions">
+			{#each suggestions as { name, country, id }}
+				<option value={id} label={`${name}, ${country}`} />
+			{/each}
+		</datalist>
+		{#if pending}
+			<button type="submit" disabled>Searching...</button>
+		{:else}
+			<button type="submit">Add</button>
+		{/if}
+	</fieldset>
 </form>

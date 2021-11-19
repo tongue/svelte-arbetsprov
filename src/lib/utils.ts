@@ -1,5 +1,4 @@
-import hash from 'object-hash';
-import type { GeoCity, City } from '$lib/types';
+import type { Sort } from '$lib/types';
 
 export const objectToQueryParams = (obj: Record<string, string>): string =>
 	Object.entries(obj)
@@ -7,15 +6,7 @@ export const objectToQueryParams = (obj: Record<string, string>): string =>
 		.join('&');
 
 export const generateCityId = (name: string, country: string): string =>
-	hash([name.trim().toUpperCase(), country.trim().toUpperCase()]);
-
-export const typeCity = ({ type }: GeoCity): boolean => type === 'CITY';
-
-export const toCity = ({ name, country }: GeoCity): City => ({
-	id: generateCityId(name, country),
-	name,
-	country
-});
+	`${name.trim().toUpperCase()}_${country.trim().toUpperCase()}`;
 
 export const debounce = <Arguments extends unknown[]>(
 	func: (...args: Arguments) => unknown,
@@ -29,3 +20,12 @@ export const debounce = <Arguments extends unknown[]>(
 		}, timeout);
 	};
 };
+
+export const fetchJson = async <Result extends Record<string, unknown> | unknown[]>(
+	...path: string[]
+): Promise<Result> => {
+	const res = await fetch(encodeURI(`/${path.join('/')}.json`));
+	return await res.json();
+};
+
+export const isSort = (str: string): str is Sort => ['asc', 'desc'].includes(str);

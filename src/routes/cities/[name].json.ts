@@ -1,6 +1,24 @@
 import type { RequestHandler } from '@sveltejs/kit';
-import type { City } from '$lib/types';
-import { objectToQueryParams, toCity, typeCity } from '$lib/utils';
+import type { City, GeoCity } from '$lib/types';
+import { generateCityId, objectToQueryParams } from '$lib/utils';
+
+export const isTypeCity = ({ type }: GeoCity): boolean => type === 'CITY';
+
+export const geoCityToCity = ({ name, country }: GeoCity): City => ({
+	id: generateCityId(name, country),
+	name,
+	country
+});
+
+const KEY = import.meta.env.VITE_RAPID_API_KEY || "";
+const HOST = import.meta.env.VITE_RAPID_API_HOST || "";
+
+if (KEY === "") {
+	console.error("Could not get VITE_RAPID_API_KEY from environment variables")
+}
+if (HOST === "") {
+	console.error("Could not get VITE_RAPID_API_HOST from environment variables")
+}
 
 export const get: RequestHandler<Record<string, unknown>, FormData, City[]> = async (request) => {
 	const { name } = request.params;
@@ -19,17 +37,19 @@ export const get: RequestHandler<Record<string, unknown>, FormData, City[]> = as
 			method: 'GET',
 			headers: {
 				'content-type': 'application/json',
-				'x-rapidapi-host': 'wft-geo-db.p.rapidapi.com',
-				'x-rapidapi-key': '74b80afbaemsh9f4c334c285f341p11547cjsn0acbeaf35699'
+				'x-rapidapi-host': HOST,
+				'x-rapidapi-key': KEY
 			}
 		}
 	);
 
 	const { data } = await res.json();
-	const body = data.filter(typeCity).map(toCity);
+	const body = data.filter(isTypeCity).map(geoCityToCity);
 
 	return {
 		status: res.status,
 		body
 	};
+
+	return { status: 200 };
 };
