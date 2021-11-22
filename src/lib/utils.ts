@@ -27,5 +27,3 @@ export const fetchJson = async <Result extends Record<string, unknown> | unknown
 	const res = await fetch(encodeURI(`/${path.join('/')}.json`));
 	return await res.json();
 };
-
-export const isSort = (str: string): str is Sort => ['asc', 'desc'].includes(str);

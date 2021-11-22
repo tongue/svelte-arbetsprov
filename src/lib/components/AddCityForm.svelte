@@ -14,7 +14,6 @@
 		setTimeout(() => {
 			cityName = '';
 			suggestions = [];
-			error = '';
 		}, 0);
 
 	const updateSuggestions = debounce(async (name: string): Promise<void> => {
@@ -27,10 +26,11 @@
 		const cityAlreadyExists = $cities.find((city) => city.id === cityId);
 		if (newCity && !cityAlreadyExists) {
 			cities.add({ ...newCity });
+			error = undefined;
 		} else if (cityAlreadyExists) {
-			error = 'The city is already added to the list.';
+			error = `"${cityAlreadyExists.name}" is already added to the list.`;
 		} else {
-			error = 'Could not find the city among the suggestions.';
+			error = 'Not a valid city.';
 		}
 	};
 
@@ -50,31 +50,104 @@
 	};
 </script>
 
-<form action="/api/cities" on:submit|preventDefault>
+<form action="/cities" method="post" on:submit|preventDefault aria-owns="weather-list">
 	{#if error}
-		<p>{error}</p>
+		<div id="city-error" role="alert">
+			<p>{error}</p>
+		</div>
 	{/if}
 	<fieldset>
-		<legend>Hows the weather in&hellip;</legend>
-		<label for="city-input">City</label>
+		<label for="place">Plats</label>
 		<input
 			list="suggestions"
-			id="city-input"
+			id="place"
 			type="text"
 			name="city"
+			placeholder="Stockholm, Sweden"
+			autocomplete="off"
 			on:input|preventDefault={onInput}
 			bind:value={cityName}
-			autocomplete="off"
 		/>
 		<datalist id="suggestions">
 			{#each suggestions as { name, country, id }}
 				<option value={id} label={`${name}, ${country}`} />
 			{/each}
 		</datalist>
-		{#if pending}
-			<button type="submit" disabled>Searching...</button>
-		{:else}
-			<button type="submit">Add</button>
-		{/if}
+		<button type="submit" class:pending={pending} disabled={pending}>
+			<span class="hidden">
+				{#if pending}
+					Searching...
+				{:else}
+					Add
+				{/if}
+			</span>
+		</button>
 	</fieldset>
 </form>
+
+<style>
+	form {
+		grid-area: form;
+		display: flex;
+		justify-content: center;
+	}
+
+	fieldset {
+		display: grid;
+		grid-template-columns: min-content minmax(7rem, auto) min-content;
+		align-items: center;
+		gap: var(--spacing-xs);
+		padding: var(--spacing-s);
+		background-color: var(--color-negative);
+		border: 0;
+		border-radius: var(--border-radius-m);
+		width: 100%;
+		max-width: 38rem;
+	}
+
+	label,
+	input {
+		font-size: var(--size-l);
+	}
+
+	label {
+		font-weight: var(--weight-bold);
+	}
+
+	label::after {
+		content: ':';
+	}
+
+	fieldset button {
+		background-image: url(plus.svg);
+		width: 1.5em;
+		height: 1.5em;
+	}
+
+	@keyframes rotate {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.pending {
+		animation: rotate 750ms linear infinite;
+	}
+
+	input {
+		color: var(--color-foreground);
+	}
+
+	div[role='alert'] {
+		margin-bottom: var(--spacing-xs);
+		padding: var(--spacing-xs) var(--spacing-s);
+
+		color: var(--color-negative);
+		background-color: var(--color-alert);
+
+		border-radius: var(--border-radius-m);
+	}
+</style>
