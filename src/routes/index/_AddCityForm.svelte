@@ -1,36 +1,42 @@
 <script lang="ts">
 	import type { City } from '$lib/types';
-	import { cities } from '$lib/stores/cities';
-	import { fetchJson, debounce } from '$lib/utils';
+	import { cities } from '$lib/cities';
+	import { fetchJson, debounce, cityAndCountryFromString } from '$lib/utils';
 
 	export let wait = 1000;
 
+	let form: HTMLFormElement;
 	let pending = false;
-	let cityName = '';
-	let suggestions: City[] = [];
+	let suggestionsPromise: Promise<City[]> = [];
 	let error: string | undefined = undefined;
 
 	const cleanUp = () =>
 		setTimeout(() => {
-			cityName = '';
-			suggestions = [];
+			form.reset();
 		}, 0);
 
-	const updateSuggestions = debounce(async (name: string): Promise<void> => {
-		suggestions = await fetchJson<City[]>('cities', name);
-		pending = false;
+	const updateSuggestions = debounce((name: string): void => {
+		suggestionsPromise = fetchJson<City[]>('cities', name);
 	}, wait);
 
-	const addCity = (cityId: string): void => {
-		const newCity = suggestions.find((city) => city.id === cityId);
-		const cityAlreadyExists = $cities.find((city) => city.id === cityId);
-		if (newCity && !cityAlreadyExists) {
-			cities.add({ ...newCity });
-			error = undefined;
-		} else if (cityAlreadyExists) {
-			error = `"${cityAlreadyExists.name}" is already added to the list.`;
-		} else {
-			error = 'Not a valid city.';
+	const validate = (str: string): [string, string] | undefined => {
+		error = undefined;
+		const cityAndCountry = cityAndCountryFromString(str);
+		if (!cityAndCountry) {
+			error = "Not a valid city";
+			return undefined;
+		}
+		if ($cities.find(getCity(...cityAndCountry)) {
+			error = `"${str}" is already added to the list.`;
+			return undefined;
+		}
+		return cityAndCountry;
+	}
+
+	const addCity = (cityAndCountry: string): void => {
+		const validatedCityAndCountry = validate(cityAndCountry);
+		if (validatedCityAndCountry) {
+			cities.add(...validatedCityAndCountry);
 		}
 	};
 
@@ -40,17 +46,14 @@
 			if (event.inputType === 'insertReplacementText' && event.data) {
 				cleanUp();
 				addCity(event.data);
-			} else if (value.length > 1) {
-				pending = true;
+			} else if (value.length > 0) {
 				updateSuggestions(value);
-			} else {
-				suggestions = [];
 			}
 		}
 	};
 </script>
 
-<form action="/cities" method="post" on:submit|preventDefault aria-owns="weather-list">
+<form bind:this={form} action="/cities" method="post" on:submit|preventDefault aria-owns="weather-list">
 	{#if error}
 		<div id="city-error" role="alert">
 			<p>{error}</p>
@@ -66,22 +69,27 @@
 			placeholder="Stockholm, Sweden"
 			autocomplete="off"
 			on:input|preventDefault={onInput}
-			bind:value={cityName}
 		/>
 		<datalist id="suggestions">
-			{#each suggestions as { name, country, id }}
-				<option value={id} label={`${name}, ${country}`} />
-			{/each}
+			{#await suggestionsPromise then suggestions}
+				{#each suggestions as { name, country }, index}
+					<option value={`${name}, ${country}`} />
+				{/each}
+			{/await}		
 		</datalist>
-		<button type="submit" class:pending={pending} disabled={pending}>
-			<span class="hidden">
-				{#if pending}
-					Searching...
-				{:else}
-					Add
-				{/if}
-			</span>
-		</button>
+		{#await suggestionsPromise}
+			<button type="submit" class:pending disabled>
+				<span class="hidden">
+					Söker
+				</span>
+			</button>
+		{:then _}
+			<button type="submit">
+				<span class="hidden">
+					Lägg till
+				</span>
+			</button>
+		{/await}
 	</fieldset>
 </form>
 

@@ -1,6 +1,6 @@
 import { fetchJson } from '$lib/utils';
 import { derived, writable } from 'svelte/store';
-import { cities } from './cities';
+import { cities } from '$lib/cities';
 import type { City, CityAndWeather, Sort, Weather } from '$lib/types';
 
 const defaultValue: [City, Weather][] = [];

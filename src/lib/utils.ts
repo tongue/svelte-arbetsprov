@@ -1,4 +1,4 @@
-import type { Sort } from '$lib/types';
+import type { Sort, City } from '$lib/types';
 
 export const objectToQueryParams = (obj: Record<string, string>): string =>
 	Object.entries(obj)
@@ -7,6 +7,13 @@ export const objectToQueryParams = (obj: Record<string, string>): string =>
 
 export const generateCityId = (name: string, country: string): string =>
 	`${name.trim().toUpperCase()}_${country.trim().toUpperCase()}`;
+
+export const cityAndCountryFromString = (str: string): [string, string] | undefined => {
+	const cityAndCountry = str.split(",");
+	return (cityAndCountry.length === 2) ? [cityAndCountry[0].trim(), cityAndCountry[1].trim()] : undefined;
+}
+
+export const getCity = (name: string, country: string): (city: City) => boolean => (city) => city.name === name && city.country === country;
 
 export const debounce = <Arguments extends unknown[]>(
 	func: (...args: Arguments) => unknown,

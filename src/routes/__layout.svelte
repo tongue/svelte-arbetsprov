@@ -1,6 +1,5 @@
 <script lang="ts">
-	import Header from '$lib/components/Header.svelte';
-	import Footer from '$lib/components/Footer.svelte';
+	import { page } from '$app/stores';
 </script>
 
 <svelte:head>
@@ -10,12 +9,17 @@
 		href="https://fonts.googleapis.com/css2?family=Roboto:wght@500;900&display=swap"
 		rel="stylesheet"
 	/>
-	<title>Weather app</title>
 </svelte:head>
 
-<Header />
+<header role="banner">
+	<h1>Hur är vädret i…</h1>
+</header>
 <slot />
-<Footer />
+<footer>
+	<a sveltekit:prefetch href={$page.path === '/' ? '/about' : '/'}>
+		<img src="logo.svg" title="Isotop AB" alt="Isotop logotype" />
+	</a>
+</footer>
 
 <style>
 	:global(body),
@@ -149,5 +153,22 @@
 
 	:global(button) {
 		cursor: pointer;
+	}
+
+	header {
+		grid-area: header;
+	}
+
+	h1 {
+		display: block;
+		text-align: center;
+		font-size: var(--size-heading);
+		font-weight: var(--weight-bold);
+	}
+
+	footer {
+		grid-area: footer;
+		display: flex;
+		justify-content: center;
 	}
 </style>

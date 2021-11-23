@@ -1,14 +1,16 @@
 <script lang="ts">
-	import { cities } from '$lib/stores/cities';
-	import { sortedWeather, sort } from '$lib/stores/weather';
+	import AddCityForm from './_AddCityForm.svelte';
+	import { cities } from '$lib/cities';
+	import { sortedWeather, sort } from '$lib/weather';
 	import type { Sort } from '$lib/types';
-	import WeatherCard from './WeatherCard.svelte';
+	import WeatherCard from '$lib/WeatherCard.svelte';
+	import SortBy from '$lib/SortBy.svelte';
 
 	const remove: (id: string) => () => void = (id) => () => cities.remove(id);
 
 	const sortingMethods: Record<string, Sort> = {
-		Stigande: 'asc',
-		Fallande: 'desc'
+		asc: 'Stigande',
+		desc: 'Fallande'
 	};
 
 	const changeSortingMethod: (method: Sort) => () => void = (method) => () => sort.set(method);
@@ -16,23 +18,13 @@
 	$: pendingWeatherAmount = $cities.length - $sortedWeather.length;
 </script>
 
+<svelte:head>
+	<title>Weather app</title>
+</svelte:head>
+
+<AddCityForm />
 <main>
-	<form>
-		<fieldset disabled={!$sortedWeather.length}>
-			<label for="sort">Sortera på temperatur</label>
-			{#each Object.entries(sortingMethods) as [label, method], index}
-				<input
-					type="radio"
-					name="sort"
-					value={method}
-					id={method}
-					checked={index === 0}
-					on:change={changeSortingMethod(method)}
-				/>
-				<label for={method}>{label}</label>
-			{/each}
-		</fieldset>
-	</form>
+	<SortBy disabled={!$sortedWeather.length} methods={sortingMethods} label="temperature" onChange={changeSortingMethod} />
 	{#if $sortedWeather.length}
 		<ol id="weather-list">
 			{#each $sortedWeather as [city, weather]}
@@ -90,35 +82,5 @@
 		width: var(--spacing-m);
 		aspect-ratio: 1 / 1;
 		transform: rotate(45deg);
-	}
-
-	fieldset {
-		display: flex;
-		align-items: center;
-		justify-content: end;
-	}
-
-	label[for="sort"]::after {
-		content: ":";
-		margin-right: var(--spacing-xs);
-	}
-
-	label {
-		cursor: pointer;
-	}
-
-	input[type="radio"] + label {
-		display: inline-flex;
-		align-items: center;
-		padding: 0 var(--spacing-xs);
-		height: var(--spacing-l);
-		border-radius: var(--border-radius-s);
-
-		background-color: var(--color-negative);
-	}
-
-	input[type="radio"]:checked + label {
-		background-color: var(--color-foreground);
-		color: var(--color-negative);
 	}
 </style>
